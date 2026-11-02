@@ -1,0 +1,15 @@
+name: Runner disk diagnostics
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  disk:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Inspect disposable runner storage
+        run: |
+          df -hT
+          lsblk -o NAME,SIZE,TYPE,MOUNTPOINTS
+          sudo du -xhd1 /opt /usr/local /usr/share 2>/dev/null | sort -h | tail -35 || true
+          df -h /mnt /home/runner /tmp
