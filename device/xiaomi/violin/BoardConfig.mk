@@ -1,0 +1,46 @@
+DEVICE_PATH := device/xiaomi/violin
+ALLOW_MISSING_DEPENDENCIES := true
+AB_OTA_UPDATER := true
+
+TARGET_ARCH := arm64
+TARGET_ARCH_VARIANT := armv8-a
+TARGET_CPU_ABI := arm64-v8a
+TARGET_CPU_VARIANT := generic
+TARGET_IS_64_BIT := true
+
+TARGET_BOOTLOADER_BOARD_NAME := O1_asic
+TARGET_BOARD_PLATFORM := O1_asic
+TARGET_NO_BOOTLOADER := true
+TARGET_OTA_ASSERT_DEVICE := violin
+
+# OS3.0.305 stock recovery is a dedicated A/B v4 ramdisk-only image.
+BOARD_BOOT_HEADER_VERSION := 4
+BOARD_MKBOOTIMG_ARGS += --header_version 4
+BOARD_KERNEL_PAGESIZE := 4096
+BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE := true
+TARGET_NO_KERNEL_OVERRIDE := true
+BOARD_RAMDISK_USE_LZ4 := true
+BOARD_RECOVERYIMAGE_PARTITION_SIZE := 104857600
+BOARD_BOOTIMAGE_PARTITION_SIZE := 100663296
+BOARD_FLASH_BLOCK_SIZE := 4096
+
+BOARD_HAS_LARGE_FILESYSTEM := true
+BOARD_USERDATAIMAGE_FILE_SYSTEM_TYPE := f2fs
+TARGET_USERIMAGES_USE_F2FS := true
+TARGET_USERIMAGES_USE_EXT4 := true
+TARGET_COPY_OUT_VENDOR := vendor
+TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery.fstab
+TARGET_SCREEN_DENSITY := 400
+TARGET_RECOVERY_PIXEL_FORMAT := "RGBX_8888"
+
+# First compile is experimental; encryption and device hardware are unverified.
+TW_THEME := portrait_hdpi
+TW_NO_SCREEN_BLANK := true
+TW_BRIGHTNESS_PATH := "/sys/class/backlight/panel0-backlight/brightness"
+TW_MAX_BRIGHTNESS := 4095
+TW_DEFAULT_BRIGHTNESS := 2046
+TW_LOAD_VENDOR_BOOT_MODULES := true
+
+# The TWRP-specific module loader also needs TW_LOAD_VENDOR_MODULES. This tree
+# does not yet configure it; first-stage init may still load vendor modules.
+-include $(DEVICE_PATH)/OrangeFoxConfig.mk

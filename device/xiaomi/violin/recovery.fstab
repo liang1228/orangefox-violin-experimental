@@ -1,0 +1,4 @@
+# Experimental initial configuration; encrypted userdata is intentionally absent.
+/cache ext4 /dev/block/by-name/rescue flags=display=cache
+/boot emmc /dev/block/by-name/boot flags=display=boot;slotselect
+/recovery emmc /dev/block/by-name/recovery flags=display=recovery;slotselect

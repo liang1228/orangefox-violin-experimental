@@ -1,0 +1,15 @@
+on init
+    start console
+    setprop sys.usb.configfs 1
+
+on property:sys.usb.config=fastboot
+    write /sys/bus/platform/devices/e1ac0000.xr_usb/force_role 2
+
+service console /system/bin/sh
+    class core
+    console
+    disabled
+    user shell
+    group shell log readproc
+    seclabel u:r:shell:s0
+    setenv HOSTNAME console
