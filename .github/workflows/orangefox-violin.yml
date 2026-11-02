@@ -65,7 +65,10 @@ jobs:
           cd "$RUNNER_TEMP/fox_12.1"
           mkdir -p device/xiaomi
           cp -a "$GITHUB_WORKSPACE/device/xiaomi/violin" device/xiaomi/violin
+          set +e
           source build/envsetup.sh
+          set -e
+          type lunch >/dev/null
           export ALLOW_MISSING_DEPENDENCIES=true
           lunch twrp_violin-eng
           mkdir -p "$GITHUB_WORKSPACE/build-output"
