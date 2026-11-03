@@ -3,6 +3,7 @@
 set -euo pipefail
 
 base=/root/orangefox-violin-20261103
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 sync_dir="$base/fox-sync"
 source_dir="$base/source"
 repo_bin="$base/bin/repo"
@@ -45,5 +46,7 @@ test -d "$source_dir/vendor/recovery"
 test "$(git -C "$source_dir/bootable/recovery" rev-parse HEAD)" = "$recovery_commit"
 cd "$source_dir"
 repo manifest -r -o "$base/manifest-pinned.xml"
+python3 "$script_dir/correct-source-manifest.py" "$source_dir" \
+    "$base/manifest-pinned.xml" "$base/manifest-corrected.xml"
 git -C vendor/recovery rev-parse HEAD > "$base/vendor-recovery-commit.txt"
 printf 'Local sources synced; device tree and build still require setup.\n'

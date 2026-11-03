@@ -7,12 +7,17 @@ download to four parallel jobs, and avoids the upstream helper's shared
 `/tmp/recovery` path. The source tree must not already exist.
 
 After a successful sync, the script checks the recovery commit used by the
-working Actions build and saves a pinned repo manifest and the vendor-recovery
-commit alongside the source tree. Other OrangeFox sync patches remain local;
-review their changes before treating the manifest as a fully reproducible build.
-The script does not configure the violin device tree, compile, flash, or upload
-source trees or firmware images. Those steps and real-device compatibility must
-be verified separately.
+Actions build and saves two source inventories alongside the source tree. The
+raw `manifest-pinned.xml` incorrectly describes the replaced recovery checkout
+as TeamWin and omits `vendor/recovery`; do not use it to restore the tree. The
+corrected inventory records the actual OrangeFox URLs and revisions. It is not
+a complete build recipe: the pinned upstream sync script applies additional
+patches, and the local build script applies the single-plane display change.
+
+`build-local-orangefox.sh` copies the tracked violin device tree into the
+isolated source and builds `recoveryimage` with four jobs. It records output in
+`/root/orangefox-violin-20261103/build-local.log`. A successful build is not
+proof of real-device compatibility. Neither script flashes or reboots a device.
 
 The device-specific source and build configuration are maintained in this
 private repository. Large Android/OrangeFox upstream source trees, proprietary
