@@ -57,6 +57,7 @@ jobs:
           cd "$RUNNER_TEMP/fox-sync"
           ./orangefox_sync.sh --branch 12.1 --path "$RUNNER_TEMP/fox_12.1"
           test -d "$RUNNER_TEMP/fox_12.1/vendor/twrp"
+          test "$(git -C "$RUNNER_TEMP/fox_12.1/bootable/recovery" rev-parse HEAD)" = 6bd902d14f754ab98a7cccc5598f7b9d135cfc38
 
       - name: Install device tree and build recovery
         shell: bash
@@ -65,6 +66,9 @@ jobs:
           cd "$RUNNER_TEMP/fox_12.1"
           mkdir -p device/xiaomi
           cp -a "$GITHUB_WORKSPACE/device/xiaomi/violin" device/xiaomi/violin
+          # Diagnostic: the observed XRing DRM stack rejected the default
+          # multi-plane atomic commit. This is a test, not a verified fix.
+          python3 -c 'from pathlib import Path; p=Path("bootable/recovery/minuitwrp/graphics_drm.cpp"); s=p.read_text(); old="#define DEFAULT_NUM_LMS 2"; assert s.count(old)==1; p.write_text(s.replace(old, "#define DEFAULT_NUM_LMS 1"))'
           set +e
           source build/envsetup.sh
           set -e
