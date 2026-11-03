@@ -44,9 +44,10 @@ The live 6.6.118 kernel subsequently reported a real warning in
 `nt36xxx.c:3164`: a 5192-byte copy into the 5176-byte `tp_frame->tp_raw` field,
 from `nvt_ts_work_func`. Recovery and ADB remained responsive, but this warning
 has not been fixed or shown to be harmless. The driver exposes raw THP interfaces
-and `enable_touch_raw` reads `1`; a dependency on vendor userspace touch
-processing remains an investigation hypothesis. No vendor daemon has been run
-in this test. Physical touch response and coordinate mapping remain unverified.
+and `enable_touch_raw` reads `1`. The first module-only test did not run a vendor
+daemon. The [2026-11-04 THP follow-up](THP-TOUCH.md) confirmed the missing
+userspace processing path and ran the matching stock daemon in recovery RAM.
+Physical touch response and coordinate mapping remain unverified.
 
 ## Synthetic input test
 
