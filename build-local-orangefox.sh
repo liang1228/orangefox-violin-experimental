@@ -7,6 +7,7 @@ source_dir="$base/source"
 repo_dir=/mnt/e/workspace/projects/xiaomi-root/analysis_outputs/orangefox-violin-actions
 expected_recovery=6bd902d14f754ab98a7cccc5598f7b9d135cfc38
 test -d "$base"
+rm -f "$base/build-exit-code.txt"
 exec > "$base/build-local.log" 2>&1
 trap 'code=$?; printf "%s\n" "$code" > "$base/build-exit-code.txt"' EXIT
 renice -n 10 -p "$$" >/dev/null
