@@ -94,3 +94,11 @@ CLI commands were not part of this test.
 The image was left in `recovery_a`, with ADB accessible. `recovery_b` and
 `init_boot_a` retained their pre-test hashes. Original firmware and complete
 device logs are kept locally, outside this Git repository.
+
+## Later offline touch candidate
+
+The [Skyward-inspired OS3 candidate](SKYWARD-TOUCHFEATURE.md) adds the full touch
+HAL, a private C++ runtime, a compatible VINTF declaration, and a compiled XY/Y
+orientation candidate. It has passed offline checks but has not booted or
+demonstrated physical touch. Its new mapping also changes the raw coordinates
+needed by the older synthetic tab helper above.

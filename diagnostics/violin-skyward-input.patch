@@ -1,0 +1,24 @@
+diff --git a/minuitwrp/Android.bp b/minuitwrp/Android.bp
+--- a/minuitwrp/Android.bp
++++ b/minuitwrp/Android.bp
+@@ -24,7 +24,9 @@ cc_library_shared {
+     name: "libminuitwrp",
+     defaults: ["libminuitwrp_defaults", "twrp_defaults"],
+     cflags: [
+-        "-DTWRES=\"/twres/\""
++        "-DTWRES=\"/twres/\"",
++        "-DRECOVERY_TOUCHSCREEN_SWAP_XY",
++        "-DRECOVERY_TOUCHSCREEN_FLIP_Y"
+     ],
+     include_dirs: [
+         "external/libpng",
+diff --git a/minuitwrp/events.cpp b/minuitwrp/events.cpp
+--- a/minuitwrp/events.cpp
++++ b/minuitwrp/events.cpp
+@@ -743,5 +743,5 @@ static int vk_modify(struct ev *e, struct input_event *ev)
+     x = gr_fb_width() - x;
+ #endif
+ #ifdef RECOVERY_TOUCHSCREEN_FLIP_Y
+-    y = gr_fb_height() - y;
++    y = gr_fb_height() - 1 - y;
+ #endif
