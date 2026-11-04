@@ -1,8 +1,10 @@
 # Skyward-inspired touch candidate for OS3.0.305
 
-This is an **unbooted diagnostic candidate**, not a verified touch fix. The
-tablet was not connected during this work. No reboot, flash, stock recovery
-restoration, or userdata operation was performed.
+The V2 image below is an **unbooted diagnostic candidate**. On reconnection,
+the full HAL and input library were tested in the installed OrangeFox's RAM.
+Physical touch and position were confirmed by the user after the missing VINTF
+base manifest was added. This runtime result does not establish cold startup
+of a newly packaged image. No recovery partition was flashed during that test.
 
 The user-supplied Skyward image targets OS4.0.0.14. Only its touch-service
 approach and author-reported orientation were used. Its recovery executable,
@@ -23,7 +25,9 @@ firmware and remain local.
   supplies them; the global Recovery C++ library is unchanged.
 - Add a minimal AIDL V1 declaration. The original stock manifest version 8.0 is
   rejected by this build's `assemble_vintf`; the adapted declaration is accepted.
-  Parser acceptance does not establish runtime Binder registration.
+  Also include `/vendor/etc/vintf/manifest.xml`: the older libvintf does not
+  discover the ODM fragment without a device base manifest. V2 omitted this
+  base and its full HAL aborted when Binder registration was rejected.
 - Apply the Skyward author's reported XY swap and screen-Y mirror in
   `libminuitwrp`. The existing source macros had no build wiring in this pinned
   checkout; the dedicated patch adds both compiler flags. Correct the mirror
@@ -34,8 +38,8 @@ firmware and remain local.
 
 The orientation patch is specific to the dedicated violin checkout. It is not
 a generic change suitable for every OrangeFox device. Physical orientation on
-this OS3 tablet still needs acceptance; the Skyward author's OS4 measurements
-are not local physical test results.
+this OS3 tablet was confirmed in the RAM test below; the packaged image still
+needs its own cold-start acceptance.
 
 ## Local build and packaging
 
@@ -83,18 +87,50 @@ ELF export presence is a static check, not proof of Android linker namespaces,
 C++ ABI semantics, successful dlopen, or available sensors/Binder services.
 The NONE footer is unsigned and does not prove boot-chain acceptance.
 
-## Pending device acceptance
+## Live runtime verification, 2026-11-04
+
+Reference: [Skyward PR #1](https://github.com/kirklin/skyward/pull/1), inspected
+at head `97b8bd36e669a8ae72ec8ff64ea0b8c486f33e3f`. Its root touch service,
+service-description setup and axis reversal informed this adaptation; its
+Qualcomm-specific device and secure-stack configuration was not transplanted.
+
+The installed recovery was still the earlier single-plane image. Matching OS3
+HAL files and dependencies were staged in RAM, leaving the running GUI's input
+library intact for the first comparison. The full HAL exited with signal 6
+after `Check failed: status == STATUS_OK`. Tracing servicemanager showed that
+both device base manifests were absent, so the valid ODM touch fragment was
+never loaded and registration was refused. Adding only the empty device base
+manifest and restarting the manually launched Binder manager made it load the
+fragment and accept the touch interface. The full HAL then stayed running.
+
+Physical contact produced more than 2,000 event3 lines with the old library,
+but the user still could not operate the GUI. Reloading only the GUI with the
+compiled XY-swap/Y-mirror library made page changes work; the user confirmed
+that touch and position were normal. The boot ID stayed unchanged and all
+three recovery_a/recovery_b/init_boot_a hashes retained their earlier values.
+GUI startup restarted adbd and killed daemons inherited from its old cgroup;
+the manually launched Binder manager and HAL had to be restarted after the GUI.
+They were subsequently moved out of adbd's cgroup and survived three MTP cycles.
+Init-managed services in a packaged image still need a cold-boot test. See
+[Chinese UI and MTP verification](CHINESE-MTP.md) for the newer candidate.
+
+The two missing optional models (`glove_model.tflite`, `FpNonlive.tflite`) were
+logged while physical touch worked; they are not fabricated or replaced.
+No standalone debug THP consumer ran alongside the full HAL. Device serials,
+firmware, models and full runtime traces remain local.
+
+## Pending image acceptance
 
 On reconnection, first identify the current boot and preserve the working
 OrangeFox/ADB session. Inspect the existing debug daemon before attempting any
 service handover. The new service must demonstrate actual Binder registration,
 THP frame processing and event3 point reports in response to physical contact.
-Then verify physical corner/center taps and Menu/Files changes. The old synthetic
+Then verify physical corner/center taps and Menu/Files changes after cold boot.
+The old synthetic
 tab helper uses the old mapping and must not be reused unchanged with this
 candidate.
 
-Only after runtime diagnosis should a separate cold-boot test of the candidate
-be considered. Automatic service startup, physical touch, orientation, pens,
-userdata decryption and stability have not passed device acceptance. The known
+Automatic service startup in the updated image, explicit four-corner coverage,
+pens, userdata decryption and stability have not passed device acceptance. The known
 kernel `tp_raw` bounds warning (5192-byte write into a 5176-byte field) is still
 unfixed. Complete device logs, firmware, models and images are not published.

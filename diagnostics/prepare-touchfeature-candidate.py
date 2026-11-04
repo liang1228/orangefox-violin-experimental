@@ -27,6 +27,14 @@ cpio = module("prepare-thp-diagnostic")
 elf = module("check-elf-closure")
 BASE_SHA = "f999c75ec39545513e66148ccd437451ad2155ada29dd1202ee0a2020438288e"
 INPUT_SHA = "2aa5b3534b8fc19f82cbe87e7bbae685aa0cb251643a7daef3c345082c7d05f9"
+RECOVERY_ZH_MTP_SHA = "2daa3b1ae486ed8e0b0cfbc1f6599e4e14c59fc500ecdd802e5ad4794dc0b79a"
+LEGACY_MTP = b"""on property:sys.usb.config=mtp,adb && property:sys.usb.ffs.ready=1 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/idProduct 0xD001
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration adb
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f1
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state adb
+"""
 EXTRA_LIBS = (
     "libmisight.so", "libxml2.so", "vendor.xiaomi.hw.touchfeature-V1-ndk.so",
     "android.frameworks.sensorservice-V1-ndk.so", "android.hardware.sensors-V2-ndk.so",
@@ -65,12 +73,18 @@ def main():
     ap.add_argument("--input-library", type=Path, required=True)
     ap.add_argument("--avbtool", type=Path, required=True)
     ap.add_argument("--output", type=Path, required=True)
+    ap.add_argument("--recovery-program", type=Path)
+    ap.add_argument("--chinese-root", type=Path)
     args = ap.parse_args()
     image = args.base.read_bytes()
     if cpio.sha(image) != BASE_SHA:
         raise SystemExit("Unexpected THP base; no output created")
     if cpio.sha(args.input_library.read_bytes()) != INPUT_SHA:
         raise SystemExit("Unexpected input library; no output created")
+    if bool(args.recovery_program) != bool(args.chinese_root):
+        raise SystemExit("Recovery program and Chinese resources must be supplied together")
+    if args.recovery_program and cpio.sha(args.recovery_program.read_bytes()) != RECOVERY_ZH_MTP_SHA:
+        raise SystemExit("Unexpected Chinese/MTP program; no output created")
     props = (args.stock_root / "odm/etc/build.prop").read_text()
     if "ro.odm.build.version.incremental=OS3.0.305.0.WOTCNXM" not in props:
         raise SystemExit("Wrong stock version")
@@ -102,6 +116,9 @@ def main():
         raise SystemExit("Unexpected stock touchfeature interface")
     add("vendor/odm/etc/vintf/manifest/vendor.xiaomi.hw.touchfeature-service.xml",
         HERE / "violin-touchfeature-manifest.xml")
+    # libvintf does not load ODM fragments without a device base manifest.
+    # Without this, the full HAL aborts after addService is rejected.
+    add("vendor/etc/vintf/manifest.xml", HERE / "violin-device-manifest.xml")
     for name in ("Pencil_Posture.xml", "gameturbotool-fastinput.json",
                  "gameturbotool.json", "stylus_game_config.json"):
         add("vendor/odm/etc/touch/" + name, args.stock_root / "odm/etc/touch" / name)
@@ -110,7 +127,22 @@ def main():
     add("vendor/odm/lib64/touchfeature/libc++.so", args.stock_root / "vendor/lib64/libc++.so")
     add("system/bin/start-violin-touchfeature.sh", HERE / "start-violin-touchfeature.sh", 0o755)
     add("system/lib64/libminuitwrp.so", args.input_library)
-    changes[cpio.INIT_RC] = (old[cpio.INIT_RC][0][1], rc.replace(cpio.SERVICE, SERVICE))
+    if rc.count(LEGACY_MTP) != 1:
+        raise SystemExit("Unexpected legacy USB handler")
+    rc = b"import /init.violin.mtp.rc\n" + rc.replace(LEGACY_MTP, b"").replace(cpio.SERVICE, SERVICE)
+    changes[cpio.INIT_RC] = (old[cpio.INIT_RC][0][1], rc)
+    add("init.violin.mtp.rc", HERE / "violin-mtp.rc")
+    if args.recovery_program:
+        for name, expected in (
+            ("twres/languages/zh_CN.xml", "82cd7b49cece92d5ca2021517a68a8805af758f0d85fffee69bb030a0bc35425"),
+            ("twres/fonts/wqy-microhei.ttf", "e4bca8df123ce01b104780f576ea1a58b9a5ff1662a91124b6d3180cb6c88212"),
+        ):
+            path = args.chinese_root / name
+            if cpio.sha(path.read_bytes()) != expected:
+                raise SystemExit("Unexpected Chinese resource: " + name)
+            add(name, path)
+        add("twres/fonts/wqy-microhei_README.txt", args.chinese_root / "twres/fonts/wqy-microhei_README.txt")
+        add("system/bin/recovery", args.recovery_program, 0o755)
     manifest_items = {}
     for line in old["system/etc/violin-thp.sha256"][1].decode().splitlines():
         digest, name = line.split("  ", 1)
@@ -172,6 +204,8 @@ def main():
         audits = [elf.audit(root / n, private) for n in targets]
         audits += [elf.audit(root / n, normal) for n in (
             "system/lib64/libminuitwrp.so", "system/bin/servicemanager")]
+        if args.recovery_program:
+            audits.append(elf.audit(root / "system/bin/recovery", normal))
         for item in audits:
             if item["missing_libraries"] or item["unresolved_strong_symbols"]:
                 raise ValueError("ELF audit failed: " + json.dumps(item))
@@ -210,6 +244,8 @@ def main():
               "rollback_index_location": 11, "avbtool_output": verified.stdout.strip(),
               "boot_verified": False, "binder_registration_verified": False,
               "physical_touch_verified": False, "kernel_bounds_warning_fixed": False,
+              "chinese_default": bool(args.recovery_program), "mtp_functionfs_configured": True,
+              "mtp_packaged_runtime_verified": False,
               "flash_recommended": False}
     (args.output / "offline-verification.json").write_text(json.dumps(report, indent=2) + "\n")
     (args.output / "violin-touchfeature.sha256").write_text(manifest)

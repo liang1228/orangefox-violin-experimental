@@ -1,0 +1,107 @@
+--- a/partitionmanager.cpp
++++ b/partitionmanager.cpp
+@@ -3095,9 +3095,18 @@
+ bool TWPartitionManager::Enable_MTP(void) {
+ #ifdef TW_HAS_MTP
+ 	if (mtppid) {
+-		LOGINFO("MTP already enabled\n");
+-		return true;
+-	}
++		int status;
++		pid_t result;
++		do { result = waitpid(mtppid, &status, WNOHANG); } while (result < 0 && errno == EINTR);
++		if (result == 0) {
++			LOGINFO("MTP already enabled\n");
++			return true;
++		}
++		mtppid = 0;
++		if (mtp_write_fd >= 0) close(mtp_write_fd);
++		mtp_write_fd = -1;
++	}
++	property_set("sys.usb.ffs.mtp.ready", "0");
+ 
+ 	int mtppipe[2];
+ 
+@@ -3128,12 +3137,35 @@
+ 	if (mtppid) {
+ 		close(mtppipe[0]); // Host closes read side
+ 		mtp_write_fd = mtppipe[1];
++		// fork() success alone does not mean the USB driver is available.
++		bool ready = false;
++		for (int attempt = 0; attempt < 100; ++attempt) {
++			int status;
++			if (waitpid(mtppid, &status, WNOHANG) == mtppid) {
++				mtppid = 0;
++				break;
++			}
++			char descriptors[PROPERTY_VALUE_MAX], state[PROPERTY_VALUE_MAX];
++			property_get("sys.usb.ffs.mtp.ready", descriptors, "0");
++			property_get("sys.usb.state", state, "");
++			if (!strcmp(descriptors, "1") && !strcmp(state, "mtp,adb")) {
++				ready = true;
++				break;
++			}
++			usleep(50000);
++		}
++		if (!ready) {
++			Disable_MTP();
++			gui_err("mtp_fail=Failed to enable MTP");
++			return false;
++		}
+ 		DataManager::SetValue("tw_mtp_enabled", 1);
+ 		Add_All_MTP_Storage();
+ 		return true;
+ 	} else {
+ 		close(mtppipe[0]);
+ 		close(mtppipe[1]);
++		Disable_MTP();
+ 		gui_err("mtp_fail=Failed to enable MTP");
+ 		return false;
+ 	}
+@@ -3181,12 +3213,12 @@
+ 		LOGINFO("Disabling MTP\n");
+ 		int status;
+ 		kill(mtppid, SIGKILL);
++		// Reap the actual MTP child, not an arbitrary child in our process group.
++		while (waitpid(mtppid, &status, 0) < 0 && errno == EINTR) {}
+ 		mtppid = 0;
+-		// We don't care about the exit value, but this prevents a zombie process
+-		waitpid(mtppid, &status, 0);
+-		close(mtp_write_fd);
+-		mtp_write_fd = -1;
+-	}
++	}
++	if (mtp_write_fd >= 0) close(mtp_write_fd);
++	mtp_write_fd = -1;
+ #endif
+ 	property_set("sys.usb.config", "adb");
+ #ifdef TW_HAS_MTP
+--- a/mtp/ffs/twrpMtp.cpp
++++ b/mtp/ffs/twrpMtp.cpp
+@@ -16,6 +16,8 @@
+ 
+ 
+ #include <string>
++#include <dirent.h>
++#include <stdlib.h>
+ #include <fcntl.h>
+ #include <sys/wait.h>
+ #include <pthread.h>
+@@ -102,6 +104,17 @@
+ 	if (pid == 0) {
+ 		// Child process
+ 		close(mtppipe[1]); // Child closes write side
++		// Do not retain GUI input/DRM descriptors or the command FIFO writer.
++		// Inheriting orsout keeps a completed CLI command blocked until MTP exits.
++		DIR* fds = opendir("/proc/self/fd");
++		if (fds) {
++			struct dirent* entry;
++			while ((entry = readdir(fds))) {
++				int fd = atoi(entry->d_name);
++				if (fd > 2 && fd != mtppipe[0] && fd != dirfd(fds)) close(fd);
++			}
++			closedir(fds);
++		}
+ 		mtp_read_pipe = mtppipe[0];
+ 		start();
+ 		MTPD("MTP child process exited.\n");

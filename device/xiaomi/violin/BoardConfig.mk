@@ -35,6 +35,8 @@ TARGET_RECOVERY_PIXEL_FORMAT := "RGBX_8888"
 
 # First compile is experimental; encryption and device hardware are unverified.
 TW_THEME := portrait_hdpi
+TW_EXTRA_LANGUAGES := true
+TW_DEFAULT_LANGUAGE := zh_CN
 TW_NO_SCREEN_BLANK := true
 TW_BRIGHTNESS_PATH := "/sys/class/backlight/panel0-backlight/brightness"
 TW_MAX_BRIGHTNESS := 4095
