@@ -6,6 +6,10 @@ internal-storage MTP, a successful new-image boot, or touch after mounting data.
 The user reports no screen-lock credential; the first runtime path should use
 that condition, without requesting a password or assuming it removes encryption.
 
+Follow-up: [three source fixes and a read-only Android check](CRYPTO-UNLOCK-FIXES.md)
+now have their own results. The original build hashes below are historical;
+the updated build script applies those fixes when creating a new probe.
+
 ## Verified on the build computer
 
 | Check | Result |
@@ -70,16 +74,16 @@ The scripts use this project's existing WSL checkout and matching stock
 extraction. They do not connect to a tablet:
 
 ```sh
-bash diagnostics/build-crypto-probe.sh
+bash diagnostics/build-crypto-probe.sh --result /path/to/new/probe-directory
 python3 diagnostics/verify-crypto-probe.py \
-  --probe /root/orangefox-violin-20261103/crypto-probe-20261104 \
+  --probe /path/to/new/probe-directory \
   --stock-root /root/orangefox-violin-20261103/stock-thp-305 \
   --ndk /mnt/e/workspace/projects/xiaomi-root/ndk \
   --output /path/to/new/verification-directory
 ```
 
 `build-crypto-probe.sh` deliberately refuses to reuse its existing evidence
-directory. For another build, choose a new `result` path in the script; do not
+directory. For another build, pass a new `--result` directory; do not
 delete the original evidence. It locks the build tree, checks the canonical
 BoardConfig, and restores it only if the temporary profile is still its own.
 The captured `compiled-root` remains available independently of later builds.
@@ -98,13 +102,16 @@ The mount regression requires root and mount-namespace support in Linux/WSL.
 1. Integrate matching OS3 Mitee services, device permissions, trusted
    applications and an old-libvintf-compatible manifest. Passing ELF checks
    alone does not supply these.
-2. Resolve the pinned decrypt path's HIDL Gatekeeper expectation against
-   this firmware's AIDL Gatekeeper. The reported no-credential case is the
-   first target; it does not validate PIN/password/pattern support.
+2. The pinned no-credential synthetic-password branch skips hardware
+   Gatekeeper verification. Its keystore/SP path is the first target. HIDL
+   versus AIDL Gatekeeper compatibility is still required before claiming
+   PIN/password/pattern support.
 3. Guard startup before testing existing metadata keys. The current Recovery
-   can automatically enter its decrypt path, and the pinned metadata-key
-   code can create directories or generate a key when retrieval fails.
-   Running that path is not a read-only inspection.
+   can automatically enter its decrypt path. It already selects `neverGen()`
+   for metadata retrieval; the follow-up patch additionally prevents directory
+   creation there when a key is missing. The overall unlock path still contacts
+   secure hardware and can use scratch/upgrade paths, so running it is not a
+   read-only inspection.
 4. With the tablet connected, verify real data mapping, file-key unlock,
    touch across mounting and USB switches, and a file round trip via MTP.
    None of these is established by this offline report.

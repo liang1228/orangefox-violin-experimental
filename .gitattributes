@@ -1,2 +1,5 @@
 *.sh text eol=lf
 *.patch text eol=lf
+# Unified diff context includes a leading space before original indentation.
+diagnostics/violin-default-password.patch whitespace=-space-before-tab
+diagnostics/violin-keymaster-no-upgrade.patch whitespace=-blank-at-eol

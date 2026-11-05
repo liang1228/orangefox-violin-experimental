@@ -1,0 +1,17 @@
+diff --git a/MetadataCrypt.cpp b/MetadataCrypt.cpp
+--- a/MetadataCrypt.cpp
++++ b/MetadataCrypt.cpp
+@@ -111,6 +111,13 @@ static bool read_key(const std::string& metadata_key_dir, const KeyGeneration& gen,
+     std::string sKey;
+     auto dir = metadata_key_dir + "/key";
+     LOG(INFO) << "metadata_key_dir/key: " << dir;
++    if (!gen.allow_gen) {
++        if (!pathExists(dir)) {
++            LOG(ERROR) << "No existing metadata key; refusing initialization";
++            return false;
++        }
++        return retrieveKey(dir, kEmptyAuthentication, key);
++    }
+     if (!MkdirsSync(dir, 0700)) return false;
+     if (!pathExists(dir)) {
+         auto delete_all = android::base::GetBoolProperty(
