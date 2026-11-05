@@ -102,9 +102,13 @@ The kernel's mitee module and `/dev/tee0`/`teepriv0` exist, but the userspace
 service/unlock path is not integrated in this build.
 
 An offline audit of the matching OS3 vendor found no missing dependency for
-tee-supplicant; the KeyMint and Gatekeeper closures still lack
-`libapexsupport.so` in the audited Recovery/vendor search paths. This is a
-static result, not proof that adding one library would make decryption work.
+tee-supplicant; initially, the KeyMint and Gatekeeper closures lacked
+`libapexsupport.so` in the audited Recovery/vendor search paths. The
+[2026-11-05 offline probe](CRYPTO-PROBE.md) extracted that library from the
+matching OS3 system partition and passed all three static closures. The
+FBE-enabled Recovery/keystore2 build and a host-only touch mount-isolation
+regression also pass. These programs have not run on the tablet; actual
+decryption, touch after mounting data, and internal-storage MTP remain untested.
 No wrapped keys or credentials were read, secure services executed, userdata
 formatted, encryption removed, or metadata changed during this inspection.
 
