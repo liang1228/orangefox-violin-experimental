@@ -1,0 +1,60 @@
+# Imported by the main recovery init. All programs remain owned by init,
+# outside adbd's cgroup. The GUI is released even if the bootstrap times out.
+on early-fs
+    setprop sys.orangefox.crypto.services_ready 0
+    start violin-crypto-bootstrap
+    setprop sys.orangefox.crypto.started 1
+
+service violin-crypto-bootstrap /system/bin/timeout -s TERM -k 2 75 /system/bin/sh /system/bin/start-violin-crypto.sh
+    disabled
+    oneshot
+    user root
+    group root
+    seclabel u:r:recovery:s0
+    stdio_to_kmsg
+
+on property:init.svc.violin-crypto-bootstrap=stopped && property:sys.orangefox.crypto.started=1
+    start recovery
+
+service violin-servicemanager /system/bin/servicemanager
+    disabled
+    user root
+    group root readproc
+    seclabel u:r:recovery:s0
+    stdio_to_kmsg
+    onrestart setprop sys.orangefox.crypto.services_ready 0
+
+service violin-touchfeature /system/bin/violin-touch-mountns --ram-view /tmp/violin-touch-view /system/bin/sh /system/bin/start-violin-touchfeature.sh
+    disabled
+    user root
+    group root input
+    seclabel u:r:recovery:s0
+    stdio_to_kmsg
+
+service violin-tee /vendor/bin/tee-supplicant
+    disabled
+    user root
+    group root system secure_element nfc
+    capabilities SYS_RAWIO
+    setenv LD_LIBRARY_PATH /system/lib64/violin-crypto:/system/lib64
+    seclabel u:r:recovery:s0
+    stdio_to_kmsg
+    onrestart setprop sys.orangefox.crypto.services_ready 0
+
+service violin-keymint /vendor/bin/hw/android.hardware.security.keymint@3.0-service.mitee
+    disabled
+    user root
+    group root system drmrpc
+    setenv LD_LIBRARY_PATH /system/lib64/violin-crypto:/system/lib64
+    seclabel u:r:recovery:s0
+    stdio_to_kmsg
+    onrestart setprop sys.orangefox.crypto.services_ready 0
+
+service violin-gatekeeper /vendor/bin/hw/android.hardware.gatekeeper-service.mitee
+    disabled
+    user root
+    group root system
+    setenv LD_LIBRARY_PATH /system/lib64/violin-crypto:/system/lib64
+    seclabel u:r:recovery:s0
+    stdio_to_kmsg
+    onrestart setprop sys.orangefox.crypto.services_ready 0

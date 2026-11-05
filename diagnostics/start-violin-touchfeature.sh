@@ -4,10 +4,12 @@ set -eu
 export TMPDIR=/tmp
 [ "$(id -u)" = 0 ]
 [ "$(getprop ro.product.device)" = violin ]
-[ "$(getprop init.svc.recovery)" = running ]
+[ "$(getprop init.svc.recovery)" = running ] ||
+    [ "$(getprop init.svc.violin-crypto-bootstrap)" = running ]
 
 # All daemon scratch files must stay in the recovery RAM filesystem.
-if awk '$2 ~ /^\/data(\/|$)/ || $2 ~ /^\/vendor(\/|$)/ || $2 ~ /^\/odm(\/|$)/ || $2 ~ /^\/mnt\/vendor\/persist(\/|$)/ { found=1 } END { exit !found }' /proc/mounts; then
+if [ "${VIOLIN_TOUCH_RAM_VIEW:-0}" != 1 ] &&
+   awk '$2 ~ /^\/data(\/|$)/ || $2 ~ /^\/vendor(\/|$)/ || $2 ~ /^\/odm(\/|$)/ || $2 ~ /^\/mnt\/vendor\/persist(\/|$)/ { found=1 } END { exit !found }' /proc/mounts; then
     echo 'Refusing touch diagnostic with data/vendor/odm/persist mounted.' >&2
     exit 1
 fi

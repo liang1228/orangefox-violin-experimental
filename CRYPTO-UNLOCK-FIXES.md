@@ -80,6 +80,10 @@ compatibility still require actual integration and Recovery testing.
 
 ## Reproduce
 
+Follow-up: [V6 startup integration](CRYPTO-SERVICES.md) packages this compiled
+Recovery with matching Mitee startup services. That candidate is verified
+offline; live service operations and userdata unlock are still unverified.
+
 Prerequisites: existing WSL checkout, matching stock extraction and earlier
 display/input/MTP patches. Recovery HEAD is
 `6bd902d14f754ab98a7cccc5598f7b9d135cfc38`; vold HEAD is

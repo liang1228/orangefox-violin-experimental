@@ -7,7 +7,8 @@ export TMPDIR=/tmp
 
 [ "$(id -u)" = 0 ]
 [ "$(getprop ro.product.device)" = violin ]
-[ "$(getprop init.svc.recovery)" = running ]
+[ "$(getprop init.svc.recovery)" = running ] ||
+    [ "$(getprop init.svc.violin-crypto-bootstrap)" = running ]
 case "$(uname -r)" in
     6.6.118-android15-8-*) ;;
     *) echo 'Unsupported kernel for this diagnostic' >&2; exit 1 ;;

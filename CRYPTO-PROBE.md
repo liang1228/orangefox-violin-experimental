@@ -99,6 +99,10 @@ The mount regression requires root and mount-namespace support in Linux/WSL.
 
 ## Runtime work still required
 
+Follow-up: [V6 startup integration](CRYPTO-SERVICES.md) now packages the
+matching service stack and verifies its offline startup controller. The live
+startup/decryption checks below remain outstanding.
+
 1. Integrate matching OS3 Mitee services, device permissions, trusted
    applications and an old-libvintf-compatible manifest. Passing ELF checks
    alone does not supply these.
